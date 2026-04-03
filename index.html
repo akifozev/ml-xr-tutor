@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML XR Tutor — Neural Network'leri 3D Sanal Gerçeklikte Öğren</title>
+<meta name="description" content="Makine öğrenmesi algoritmalarını XR/VR ortamında 3D olarak görselleştiren interaktif eğitim aracı. Google XR Blocks + Vibe Coding ile oluşturuldu.">
+
+<!-- Open Graph / LinkedIn -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="ML XR Tutor — Neural Network'leri 3D Sanal Gerçeklikte Öğren">
+<meta property="og:description" content="6 interaktif modül: Nöron yapısı, Forward/Backward Propagation, Loss Landscape, CNN Filtre Görselleştirme. Google XR Blocks Gem'e hazır prompt'lar ile.">
+<meta property="og:image" content="https://silver-empanada-02cc3d.netlify.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://silver-empanada-02cc3d.netlify.app">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ML XR Tutor — Neural Network'leri 3D'de Öğren">
+<meta name="twitter:description" content="Makine öğrenmesi algoritmalarını XR ortamında interaktif 3D görselleştirme. Vibe Coding XR ile oluşturuldu.">
+<meta name="twitter:image" content="https://silver-empanada-02cc3d.netlify.app/og-image.png">
+
+<!-- Favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #06060c;
+  --surface: rgba(14, 14, 24, 0.95);
+  --surface2: rgba(20, 20, 35, 0.8);
+  --border: rgba(100, 180, 255, 0.08);
+  --accent: #00c8ff;
+  --accent-dim: rgba(0, 200, 255, 0.15);
+  --pink: #ff2d78;
+  --purple: #8b5cf6;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --text: #dce4ec;
+  --text-dim: #5a6a7a;
+  --text-mid: #8a9aaa;
+  --glow-cyan: 0 0 40px rgba(0, 200, 255, 0.15);
+  --glow-pink: 0 0 40px rgba(255, 45, 120, 0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== CANVAS BACKGROUND ===== */
+#bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ===== HEADER ===== */
+.header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 60px 24px 40px;
+}
+
+.header .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(0,200,255,0.12);
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.badge .dot {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+.header h1 {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header p {
+  font-size: 16px;
+  color: var(--text-mid);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ===== MODULE GRID ===== */
+.modules {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: linear-gradient(90deg, var(--card-accent, var(--accent)), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.module-card:hover {
+  border-color: rgba(100, 180, 255, 0.2);
+  transform: translateY(-4px);
+  box-shadow: var(--glow-cyan);
+}
+
+.module-card:hover::before { opacity: 1; }
+
+.module-card .icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 16px;
+  background: var(--card-accent-dim, var(--accent-dim));
+  border: 1px solid var(--card-accent-border, rgba(0,200,255,0.12));
+}
+
+.module-card h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.module-card .desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.module-card .tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--card-accent, var(--accent));
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--card-accent-dim, var(--accent-dim));
+  display: inline-block;
+}
+
+/* Card color variants */
+.module-card.cyan { --card-accent: #00c8ff; --card-accent-dim: rgba(0,200,255,0.08); --card-accent-border: rgba(0,200,255,0.12); }
+.module-card.pink { --card-accent: #ff2d78; --card-accent-dim: rgba(255,45,120,0.08); --card-accent-border: rgba(255,45,120,0.12); }
+.module-card.purple { --card-accent: #8b5cf6; --card-accent-dim: rgba(139,92,246,0.08); --card-accent-border: rgba(139,92,246,0.12); }
+.module-card.green { --card-accent: #10b981; --card-accent-dim: rgba(16,185,129,0.08); --card-accent-border: rgba(16,185,129,0.12); }
+.module-card.amber { --card-accent: #f59e0b; --card-accent-dim: rgba(245,158,11,0.08); --card-accent-border: rgba(245,158,11,0.12); }
+
+/* ===== DETAIL PANEL (MODAL) ===== */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(4, 4, 10, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.overlay.active { display: flex; }
+
+.detail-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  max-width: 720px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 36px;
+  position: relative;
+}
+
+.detail-panel::-webkit-scrollbar { width: 4px; }
+.detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.detail-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.detail-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+.detail-panel h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.detail-panel .subtitle {
+  font-size: 14px;
+  color: var(--text-mid);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-section h4 {
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.xr-prompt {
+  background: rgba(0, 200, 255, 0.04);
+  border: 1px solid rgba(0, 200, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.feature-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-mid);
+  line-height: 1.4;
+}
+
+.feature-item .check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--green);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ===== 3D PREVIEW ===== */
+.preview-container {
+  width: 100%;
+  height: 280px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(0,200,255,0.03) 0%, transparent 70%);
+}
+
+.preview-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.preview-label {
+  position: absolute;
+  bottom: 8px; left: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 40px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.footer-links a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover { color: var(--accent); }
+
+.footer .credit {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 640px) {
+  .modules { grid-template-columns: 1fr; }
+  .feature-list { grid-template-columns: 1fr; }
+  .header { padding: 40px 16px 24px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="badge"><span class="dot"></span> XR Vibe Coding + Machine Learning</div>
+  <h1>ML XR Tutor</h1>
+  <p>Neural network'leri 3D sanal gerçeklikte öğren. Her modül XR Blocks Gem'e gönderilmeye hazır prompt ile birlikte geliyor.</p>
+</div>
+
+<!-- MODULE GRID -->
+<div class="modules">
+
+  <div class="module-card cyan" onclick="openModule(0)">
+    <div class="icon">🧠</div>
+    <h3>Nöron ve Katmanlar</h3>
+    <p class="desc">Tek bir nöronun çalışma mantığı, ağırlıklar, bias ve aktivasyon fonksiyonlarını 3D'de keşfet.</p>
+    <span class="tag">Temel</span>
+  </div>
+
+  <div class="module-card pink" onclick="openModule(1)">
+    <div class="icon">⚡</div>
+    <h3>Forward Propagation</h3>
+    <p class="desc">Verinin giriş katmanından çıkışa nasıl aktığını, her katmanda ne olduğunu canlı gör.</p>
+    <span class="tag">Orta</span>
+  </div>
+
+  <div class="module-card purple" onclick="openModule(2)">
+    <div class="icon">🔄</div>
+    <h3>Backpropagation</h3>
+    <p class="desc">Hata sinyalinin geriye yayılışı, gradyan hesaplama ve ağırlık güncelleme süreci.</p>
+    <span class="tag">İleri</span>
+  </div>
+
+  <div class="module-card green" onclick="openModule(3)">
+    <div class="icon">📉</div>
+    <h3>Loss Landscape</h3>
+    <p class="desc">3D loss yüzeyinde gradient descent'in nasıl çalıştığını, learning rate etkisini keşfet.</p>
+    <span class="tag">İleri</span>
+  </div>
+
+  <div class="module-card amber" onclick="openModule(4)">
+    <div class="icon">🎯</div>
+    <h3>Aktivasyon Fonksiyonları</h3>
+    <p class="desc">ReLU, Sigmoid, Tanh, Softmax — her birinin 3D grafik ve XR etkileşimi ile karşılaştırması.</p>
+    <span class="tag">Orta</span>
+  </div>
+
+  <div class="module-card cyan" onclick="openModule(5)">
+    <div class="icon">🏗️</div>
+    <h3>CNN Filtre Görselleştirme</h3>
+    <p class="desc">Konvolüsyon filtrelerinin görüntü üzerinde nasıl gezdiğini, feature map'lerin oluşumunu izle.</p>
+    <span class="tag">İleri</span>
+  </div>
+
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="detail-panel" id="detailPanel">
+    <button class="detail-close" onclick="closeModule()">✕</button>
+    <h2 id="detailTitle"></h2>
+    <p class="subtitle" id="detailSubtitle"></p>
+
+    <div class="preview-container" id="previewContainer">
+      <canvas id="previewCanvas"></canvas>
+      <div class="preview-label">3D Önizleme</div>
+    </div>
+
+    <div class="detail-section">
+      <h4>XR Blocks Gem Prompt</h4>
+      <div class="xr-prompt" id="promptText">
+        <button class="copy-btn" onclick="copyPrompt()">Kopyala</button>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>XR Etkileşim Özellikleri</h4>
+      <div class="feature-list" id="featureList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-links">
+    <a href="https://xrblocks.github.io/gem/" target="_blank">XR Blocks Gem</a>
+    <a href="https://github.com/google/xrblocks" target="_blank">GitHub Repo</a>
+    <a href="https://research.google/blog/vibe-coding-xr-accelerating-ai-xr-prototyping-with-xr-blocks-and-gemini/" target="_blank">Google Research Blog</a>
+  </div>
+  <p class="credit">ML XR Tutor — Vibe Coding ile oluşturuldu</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== MODULE DATA =====
+const modules = [
+  {
+    title: "Nöron ve Katmanlar",
+    subtitle: "Tek bir yapay nöronun iç yapısını, girdilerin ağırlıklarla çarpılıp bias eklenmesini ve aktivasyon fonksiyonundan geçirilmesini 3D uzayda interaktif olarak keşfet. Pinch ile ağırlıkları değiştir, nöronun çıktısının nasıl değiştiğini gör.",
+    prompt: `Create an interactive 3D neural network neuron visualization in XR.
+
+SCENE SETUP:
+- Place a large glowing sphere (the neuron body) at center, 1 meter in front of user at eye level
+- Show 4 input connections coming from the left as glowing tubes
+- Each input has a floating label showing its value (x1=0.5, x2=0.8, x3=0.3, x4=0.9)
+- Each connection has a weight value displayed as a floating number (w1, w2, w3, w4)
+- Connection tube thickness represents weight magnitude
+- Green tubes = positive weights, red tubes = negative weights
+
+INTERACTION:
+- When user pinch-drags a weight label, the weight value changes from -2.0 to +2.0
+- As weight changes, tube thickness and color update in real-time
+- Inside the neuron sphere, show the weighted sum calculation: Σ(wi × xi) + bias
+- The sum value updates live as weights change
+- After the sum, show an activation function curve (ReLU by default) as a floating 3D graph
+- The output value exits from the right side as a glowing particle stream
+- Particle stream intensity = output activation value
+
+VISUAL STYLE:
+- Dark space environment with subtle star particles
+- Neuron body: translucent blue sphere with inner glow
+- Math formulas float as holographic text panels
+- Smooth animations on all value changes
+
+AUDIO:
+- Soft hum that changes pitch based on activation output value`,
+    features: [
+      "Pinch ile ağırlık değiştir",
+      "Canlı matematik formülleri",
+      "Aktivasyon çıktısı görselleştirme",
+      "Bias değeri ayarlama",
+      "ReLU/Sigmoid geçişi",
+      "Parçacık akışı ile çıktı"
+    ],
+    previewType: "neuron"
+  },
+  {
+    title: "Forward Propagation",
+    subtitle: "Bir veri noktasının giriş katmanından çıkış katmanına kadar olan yolculuğunu adım adım takip et. Her katmanda ağırlıklı toplam, aktivasyon ve çıktı değerlerini 3D uzayda gör.",
+    prompt: `Create an interactive forward propagation visualization in XR.
+
+NETWORK ARCHITECTURE:
+- Build a 3-layer neural network floating in front of the user
+- Input layer: 3 neurons (left side, stacked vertically, 40cm apart)
+- Hidden layer: 5 neurons (center, stacked vertically, 30cm apart)  
+- Output layer: 2 neurons (right side, stacked vertically, 40cm apart)
+- Layer spacing: 1.5 meters horizontal between each layer
+- All neurons are glowing spheres (15cm diameter)
+- Connections between all neurons in adjacent layers as thin glowing lines
+
+FORWARD PASS ANIMATION:
+- When user says "forward" or pinches the input layer:
+  1. Input neurons light up bright green with values [0.8, 0.4, 0.6]
+  2. Glowing particles travel along connections from input to hidden layer (speed: 0.5m/s)
+  3. Particle color = green for positive weight paths, red for negative
+  4. Particle size proportional to weight magnitude
+  5. As particles arrive at hidden neurons, each neuron pulses and shows its activation value
+  6. Process repeats from hidden to output layer
+  7. Output neurons show final predictions with confidence bars
+
+FLOATING PANELS:
+- A matrix multiplication panel appears beside each layer transition
+- Shows the actual W × X + b = Z calculation
+- Highlight current computation step in yellow
+
+INTERACTION:
+- Pinch any input neuron to change its value (0.0 to 1.0)
+- Tap hidden neurons to see detailed weight breakdown
+- Speed control: open palm gesture pauses, fist resumes
+- Pinch-drag to rotate the entire network in 3D
+
+VISUAL: Dark environment, neurons glow cyan, active paths pulse with energy`,
+    features: [
+      "Parçacık ile veri akışı",
+      "Matris çarpım paneli",
+      "Girdi değerlerini değiştir",
+      "Adım adım ilerleme",
+      "El ile duraklatma/devam",
+      "3D döndürme kontrolü"
+    ],
+    previewType: "forward"
+  },
+  {
+    title: "Backpropagation",
+    subtitle: "Hata sinyalinin çıkış katmanından giriş katmanına nasıl geri yayıldığını, gradyanların nasıl hesaplandığını ve ağırlıkların nasıl güncellendiğini 3D olarak izle.",
+    prompt: `Create an interactive backpropagation visualization in XR.
+
+NETWORK (same as forward prop):
+- 3-5-2 neural network floating at eye level
+- Show current weights on all connections as floating numbers
+- Display current loss value as a large floating number above the network
+
+BACKPROP ANIMATION (triggered after forward pass):
+1. OUTPUT LAYER: Show target vs predicted comparison
+   - Two bars side by side: predicted (blue) and target (green) for each output neuron
+   - Error = target - predicted, shown in red text
+   - Loss function formula appears as floating panel
+
+2. ERROR FLOWS BACKWARD:
+   - Red/orange particles flow from output to hidden layer (reverse direction)
+   - Particle intensity = gradient magnitude
+   - At each connection, show the gradient calculation: dL/dw = dL/da × da/dz × dz/dw
+   - Formula panels appear and highlight each term
+
+3. WEIGHT UPDATE:
+   - After gradients reach each weight, the weight number smoothly transitions
+   - Old weight fades out (gray), new weight fades in (green if decreased loss)
+   - Connection thickness updates to match new weight
+   - Show: w_new = w_old - lr × gradient
+
+4. REPEAT for hidden-to-input connections
+
+INTERACTION:
+- Learning rate slider: floating dial that user can pinch-rotate (0.001 to 1.0)
+- Tap "Next Epoch" floating button to run another forward+backward pass
+- Watch loss value decrease across epochs
+- Pinch any gradient to see full chain rule breakdown
+
+VISUAL: Red/orange color scheme for backward pass vs blue/green for forward`,
+    features: [
+      "Zincir kuralı görselleştirme",
+      "Learning rate ayarlama",
+      "Epoch tekrarlama",
+      "Gradyan büyüklüğü animasyonu",
+      "Loss takibi",
+      "Ağırlık güncelleme animasyonu"
+    ],
+    previewType: "backprop"
+  },
+  {
+    title: "Loss Landscape",
+    subtitle: "3 boyutlu loss yüzeyinde gradient descent'in bir topun tepeden aşağı yuvarlanması gibi çalışmasını izle. Learning rate'i değiştir, farklı optimizerleri karşılaştır.",
+    prompt: `Create an interactive 3D loss landscape visualization in XR.
+
+LOSS SURFACE:
+- Generate a 3D surface (2m × 2m) with multiple peaks and valleys
+- Surface represents loss as a function of two weights (w1, w2)
+- Use a colorful height map: red = high loss (peaks), blue = low loss (valleys)
+- Surface should have one global minimum and 2-3 local minima
+- Place the surface on a table in front of the user, slightly tilted for better view
+
+GRADIENT DESCENT BALL:
+- A glowing metallic sphere sits on the surface (represents current weights)
+- When user taps "Start", the ball begins rolling downhill following the gradient
+- Ball leaves a glowing trail showing the optimization path
+- Ball speed proportional to gradient steepness
+- Ball oscillates near minimum before settling (showing convergence)
+
+LEARNING RATE CONTROL:
+- Floating slider labeled "Learning Rate" (0.001 to 2.0)
+- Low LR: ball moves very slowly, takes many steps
+- High LR: ball overshoots, bounces around, might diverge (fly off surface!)
+- Medium LR: smooth convergence to minimum
+
+OPTIMIZER COMPARISON:
+- 3 balls of different colors can run simultaneously:
+  - Blue ball = SGD (standard gradient descent)  
+  - Green ball = SGD with Momentum (smoother path)
+  - Purple ball = Adam (adaptive, fastest convergence)
+- Each ball leaves its own colored trail
+- Floating scoreboard shows steps-to-convergence for each
+
+INTERACTION:
+- Pinch-drag to rotate the landscape and view from any angle
+- Tap on surface to place the starting point
+- Voice command: "Reset" to restart, "Compare" to show all 3 optimizers
+- Pinch the surface to locally deform it (change the loss landscape shape)
+
+VISUAL: Semi-transparent surface with grid lines, ambient particles, space environment`,
+    features: [
+      "3D loss yüzeyi",
+      "Gradient descent topu",
+      "3 optimizer karşılaştırma",
+      "Learning rate slider",
+      "Yüzeyi deforme etme",
+      "Yakınsama skoru"
+    ],
+    previewType: "loss"
+  },
+  {
+    title: "Aktivasyon Fonksiyonları",
+    subtitle: "ReLU, Sigmoid, Tanh ve Softmax fonksiyonlarının 3D grafiklerini yan yana karşılaştır. Girdi değerini değiştirip her fonksiyonun çıktısını canlı gör.",
+    prompt: `Create an interactive activation function comparison in XR.
+
+LAYOUT:
+- 4 floating 3D function graphs arranged in a 2x2 grid in front of the user
+- Each graph is a 60cm × 40cm panel with labeled axes
+- Top-left: ReLU, Top-right: Sigmoid
+- Bottom-left: Tanh, Bottom-right: Leaky ReLU
+- Each graph shows the function curve as a glowing 3D tube
+
+INTERACTION:
+- A vertical "input value" line moves across all 4 graphs simultaneously
+- User pinch-drags the input line left/right (-5 to +5)
+- On each graph, a glowing dot travels along the curve following the input
+- The output value is displayed above each dot
+- Derivative/gradient is shown as a tangent line at the current point
+- Gradient value displayed in a small label
+
+VISUAL COMPARISON:
+- When input is negative: ReLU goes flat (dead zone highlighted in red)
+- Sigmoid saturates at 0 and 1 (saturation zones highlighted)
+- Tanh saturates at -1 and +1
+- Leaky ReLU maintains small gradient for negative inputs
+
+BONUS PANEL:
+- A 5th panel shows "Vanishing Gradient Problem"
+- Stack of 10 layers, each multiplying gradients
+- Watch the gradient shrink to near-zero with Sigmoid
+- Switch to ReLU and see gradients survive through layers
+
+INTERACTION:
+- Tap any graph to enlarge it to full view
+- Voice: "Show derivative" toggles gradient visualization
+- Pinch-rotate to view function surfaces from different angles
+
+VISUAL: Clean white grid backgrounds, neon-colored curves, dark space env`,
+    features: [
+      "4 fonksiyon karşılaştırma",
+      "Canlı girdi kontrolü",
+      "Gradyan görselleştirme",
+      "Vanishing gradient demo",
+      "Tam ekran büyütme",
+      "Türev/tanjant çizgisi"
+    ],
+    previewType: "activation"
+  },
+  {
+    title: "CNN Filtre Görselleştirme",
+    subtitle: "Bir görüntü üzerinde konvolüsyon filtresinin nasıl gezdiğini, feature map'lerin katman katman nasıl oluştuğunu 3D uzayda gör.",
+    prompt: `Create an interactive CNN convolution filter visualization in XR.
+
+IMAGE INPUT:
+- Place a 2D image (a simple handwritten digit "7") as a floating panel on the left
+- Image is represented as a grid of colored squares (28x28 pixels)
+- Each pixel square's height represents intensity (3D heightmap effect)
+
+CONVOLUTION PROCESS:
+- A glowing 3x3 filter frame appears on the image
+- Filter frame slowly slides across the image (stride=1)
+- At each position:
+  1. Highlight the 3x3 region under the filter in yellow
+  2. Show the element-wise multiplication in a floating panel
+  3. Sum appears as a single value
+  4. This value is placed in the output feature map on the right
+
+- Output feature map builds up in real-time as the filter slides
+- Feature map is a 3D grid where cell height = activation value
+
+MULTIPLE FILTERS:
+- Show 4 different filters simultaneously (edge detection, horizontal, vertical, diagonal)
+- Each produces a different feature map
+- Feature maps are stacked with spacing to show depth
+
+POOLING LAYER:
+- After convolution, show max pooling
+- A 2x2 window highlights groups of cells
+- Only the maximum value survives (highlighted in green)
+- Pooled feature map appears smaller and more compact
+
+INTERACTION:
+- Pinch-drag the filter to manually slide it across the image
+- Tap a filter to see its weight values
+- Speed slider controls automatic animation speed
+- "Pause" gesture (open palm) to freeze at current position
+- Tap the output feature map to see which input region contributed most
+
+VISUAL: Dark env, image pixels as lit cubes, filter frame glowing cyan, feature maps in warm colors`,
+    features: [
+      "3D piksel heightmap",
+      "Filtre kayma animasyonu",
+      "4 farklı filtre",
+      "Max pooling görselleştirme",
+      "Manuel filtre kontrolü",
+      "Feature map oluşumu"
+    ],
+    previewType: "cnn"
+  }
+];
+
+// ===== OVERLAY / MODULE DETAIL =====
+let currentModule = -1;
+let previewScene, previewCamera, previewRenderer;
+
+function openModule(idx) {
+  currentModule = idx;
+  const m = modules[idx];
+  document.getElementById('detailTitle').textContent = m.title;
+  document.getElementById('detailSubtitle').textContent = m.subtitle;
+
+  const promptEl = document.getElementById('promptText');
+  promptEl.textContent = m.prompt;
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Kopyala';
+  copyBtn.onclick = copyPrompt;
+  promptEl.appendChild(copyBtn);
+
+  const featureEl = document.getElementById('featureList');
+  featureEl.innerHTML = m.features.map(f =>
+    `<div class="feature-item"><span class="check">✓</span>${f}</div>`
+  ).join('');
+
+  document.getElementById('overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+
+  initPreview(m.previewType);
+}
+
+function closeModule() {
+  document.getElementById('overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  if (previewRenderer) {
+    previewRenderer.dispose();
+    previewRenderer = null;
+  }
+  currentModule = -1;
+}
+
+function copyPrompt() {
+  const m = modules[currentModule];
+  navigator.clipboard.writeText(m.prompt).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Kopyalandı!';
+    setTimeout(() => btn.textContent = 'Kopyala', 1500);
+  });
+}
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModule();
+});
+
+// ===== 3D MINI PREVIEW =====
+function initPreview(type) {
+  const container = document.getElementById('previewContainer');
+  const canvas = document.getElementById('previewCanvas');
+
+  if (previewRenderer) previewRenderer.dispose();
+
+  previewScene = new THREE.Scene();
+  previewCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+  previewCamera.position.set(0, 1, 8);
+  previewCamera.lookAt(0, 0, 0);
+
+  previewRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  previewRenderer.setSize(container.clientWidth, container.clientHeight);
+  previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const ambient = new THREE.AmbientLight(0x1a1a3e, 0.6);
+  previewScene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0x00c8ff, 0.5);
+  dirLight.position.set(5, 5, 5);
+  previewScene.add(dirLight);
+
+  // Build scene based on type
+  if (type === 'neuron') buildNeuronPreview();
+  else if (type === 'forward') buildForwardPreview();
+  else if (type === 'backprop') buildBackpropPreview();
+  else if (type === 'loss') buildLossPreview();
+  else if (type === 'activation') buildActivationPreview();
+  else if (type === 'cnn') buildCNNPreview();
+
+  animatePreview();
+}
+
+function buildNeuronPreview() {
+  // Central neuron
+  const coreMat = new THREE.MeshPhongMaterial({ color: 0x00c8ff, emissive: 0x00c8ff, emissiveIntensity: 0.4, transparent: true, opacity: 0.9 });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.8, 24, 24), coreMat);
+  previewScene.add(core);
+  core.userData = { type: 'core' };
+
+  const glowMat = new THREE.MeshPhongMaterial({ color: 0x00c8ff, emissive: 0x00c8ff, emissiveIntensity: 0.2, transparent: true, opacity: 0.12 });
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 24), glowMat);
+  previewScene.add(glow);
+
+  // Input connections
+  for (let i = 0; i < 4; i++) {
+    const y = (i - 1.5) * 1.2;
+    const inputSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 12, 12),
+      new THREE.MeshPhongMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.5 })
+    );
+    inputSphere.position.set(-4, y, 0);
+    previewScene.add(inputSphere);
+
+    const points = [new THREE.Vector3(-4, y, 0), new THREE.Vector3(-0.8, 0, 0)];
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+    const lineColor = Math.random() > 0.3 ? 0x10b981 : 0xff2d78;
+    const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.5 }));
+    previewScene.add(line);
+  }
+
+  // Output
+  const outSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 12, 12),
+    new THREE.MeshPhongMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.5 })
+  );
+  outSphere.position.set(3, 0, 0);
+  previewScene.add(outSphere);
+
+  const outLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0.8, 0, 0), new THREE.Vector3(3, 0, 0)]),
+    new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.5 })
+  );
+  previewScene.add(outLine);
+}
+
+function buildForwardPreview() {
+  const layers = [3, 5, 2];
+  const spacing = 3.5;
+  const startX = -(layers.length - 1) * spacing / 2;
+  const colors = [0x10b981, 0x00c8ff, 0xff2d78];
+
+  layers.forEach((count, l) => {
+    const nSpacing = 1.8;
+    const startY = -(count - 1) * nSpacing / 2;
+    for (let n = 0; n < count; n++) {
+      const mat = new THREE.MeshPhongMaterial({ color: colors[l], emissive: colors[l], emissiveIntensity: 0.4, transparent: true, opacity: 0.85 });
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), mat);
+      sphere.position.set(startX + l * spacing, startY + n * nSpacing, 0);
+      previewScene.add(sphere);
+
+      if (l < layers.length - 1) {
+        for (let j = 0; j < layers[l + 1]; j++) {
+          const ty = -(layers[l + 1] - 1) * nSpacing / 2 + j * nSpacing;
+          const line = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(startX + l * spacing, startY + n * nSpacing, 0),
+              new THREE.Vector3(startX + (l + 1) * spacing, ty, 0)
+            ]),
+            new THREE.LineBasicMaterial({ color: 0x334466, transparent: true, opacity: 0.25 })
+          );
+          previewScene.add(line);
+        }
+      }
+    }
+  });
+}
+
+function buildBackpropPreview() {
+  buildForwardPreview();
+  // Add red backward arrows
+  for (let i = 0; i < 6; i++) {
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xff2d78, transparent: true, opacity: 0.7 })
+    );
+    particle.position.set(2 - Math.random() * 4, (Math.random() - 0.5) * 4, 0);
+    particle.userData = { speed: 0.01 + Math.random() * 0.02 };
+    previewScene.add(particle);
+  }
+}
+
+function buildLossPreview() {
+  // 3D surface
+  const size = 40;
+  const geo = new THREE.PlaneGeometry(6, 6, size, size);
+  const positions = geo.attributes.position;
+  const colors = [];
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = positions.getY(i);
+    const y = Math.sin(x * 1.5) * Math.cos(z * 1.5) * 0.8 + Math.sin(x * 0.5 + z * 0.5) * 0.4 + 1.2;
+    positions.setZ(i, y);
+
+    const t = y / 2.5;
+    colors.push(t, 0.2, 1 - t);
+  }
+
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+
+  const mat = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.8, shininess: 60 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 3;
+  mesh.position.y = -0.5;
+  previewScene.add(mesh);
+
+  // Ball
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 16, 16),
+    new THREE.MeshPhongMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.6 })
+  );
+  ball.position.set(0, 1, 0);
+  ball.userData = { type: 'ball' };
+  previewScene.add(ball);
+}
+
+function buildActivationPreview() {
+  previewCamera.position.set(0, 0, 6);
+  const funcs = [
+    { name: 'ReLU', fn: x => Math.max(0, x), color: 0x00c8ff },
+    { name: 'Sigmoid', fn: x => 1 / (1 + Math.exp(-x)), color: 0xff2d78 },
+    { name: 'Tanh', fn: x => Math.tanh(x), color: 0x8b5cf6 },
+    { name: 'LeakyReLU', fn: x => x > 0 ? x : 0.1 * x, color: 0x10b981 }
+  ];
+
+  funcs.forEach((f, i) => {
+    const points = [];
+    for (let x = -3; x <= 3; x += 0.1) {
+      const ox = (i % 2 - 0.5) * 4;
+      const oy = (Math.floor(i / 2) - 0.5) * -3;
+      points.push(new THREE.Vector3(ox + x * 0.6, oy + f.fn(x) * 0.8, 0));
+    }
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: f.color, linewidth: 2 }));
+    previewScene.add(line);
+  });
+}
+
+function buildCNNPreview() {
+  // Stacked feature map layers
+  const layerColors = [0x00c8ff, 0x8b5cf6, 0xff2d78, 0xf59e0b];
+  const layerSizes = [5, 4, 3, 2];
+  const spacing = 2;
+  const startZ = (layerColors.length - 1) * spacing / 2;
+
+  layerColors.forEach((color, i) => {
+    const s = layerSizes[i];
+    for (let r = 0; r < s; r++) {
+      for (let c = 0; c < s; c++) {
+        const h = Math.random() * 0.4 + 0.1;
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, h, 0.5),
+          new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.2, transparent: true, opacity: 0.7 })
+        );
+        cube.position.set(
+          (c - (s - 1) / 2) * 0.6,
+          h / 2 - 1,
+          startZ - i * spacing + (r - (s - 1) / 2) * 0.6
+        );
+        previewScene.add(cube);
+      }
+    }
+  });
+
+  previewCamera.position.set(3, 3, 6);
+  previewCamera.lookAt(0, 0, 0);
+}
+
+// ===== ANIMATE PREVIEW =====
+let previewAnimId;
+function animatePreview() {
+  if (!previewRenderer) return;
+  previewAnimId = requestAnimationFrame(animatePreview);
+
+  const time = Date.now() * 0.001;
+
+  // Rotate scene slowly
+  previewScene.children.forEach(child => {
+    if (child.userData?.type === 'core') {
+      child.material.emissiveIntensity = 0.3 + Math.sin(time * 2) * 0.15;
+    }
+    if (child.userData?.type === 'ball') {
+      child.position.x = Math.sin(time * 0.5) * 1.5;
+      child.position.y = Math.cos(time * 0.7) * 0.5 + 0.5;
+    }
+    if (child.userData?.speed) {
+      child.position.x -= child.userData.speed * 60;
+      if (child.position.x < -4) child.position.x = 3;
+    }
+  });
+
+  previewScene.rotation.y = Math.sin(time * 0.3) * 0.15;
+  previewRenderer.render(previewScene, previewCamera);
+}
+
+// ===== 3D NEURAL NETWORK BACKGROUND =====
+function initBackground() {
+  const container = document.getElementById('bg-canvas');
+  container.style.display = 'none'; // hide 2D canvas
+
+  const bgDiv = document.createElement('div');
+  bgDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;';
+  document.body.prepend(bgDiv);
+
+  const bgScene = new THREE.Scene();
+  bgScene.fog = new THREE.FogExp2(0x06060c, 0.012);
+
+  const bgCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+  bgCamera.position.set(0, 2, 30);
+  bgCamera.lookAt(0, 0, 0);
+
+  const bgRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  bgRenderer.setSize(window.innerWidth, window.innerHeight);
+  bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  bgRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  bgRenderer.toneMappingExposure = 1.1;
+  bgDiv.appendChild(bgRenderer.domElement);
+
+  // Lights
+  bgScene.add(new THREE.AmbientLight(0x1a1a2e, 0.4));
+  const pl1 = new THREE.PointLight(0x00c8ff, 0.5, 60);
+  pl1.position.set(-15, 10, 8);
+  bgScene.add(pl1);
+  const pl2 = new THREE.PointLight(0xff2d78, 0.3, 60);
+  pl2.position.set(15, -5, 8);
+  bgScene.add(pl2);
+  const pl3 = new THREE.PointLight(0x8b5cf6, 0.3, 60);
+  pl3.position.set(0, 15, -5);
+  bgScene.add(pl3);
+
+  // Grid floor
+  const grid = new THREE.GridHelper(80, 80, 0x0e0e1a, 0x0e0e1a);
+  grid.position.y = -10;
+  bgScene.add(grid);
+
+  // Star particles
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = [];
+  for (let i = 0; i < 600; i++) {
+    starPos.push((Math.random()-0.5)*100, (Math.random()-0.5)*50, (Math.random()-0.5)*100);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+  bgScene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({
+    size: 0.08, color: 0x334466, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending
+  })));
+
+  // ===== BUILD NEURAL NETWORK =====
+  const layerSizes = [3, 6, 10, 8, 6, 2];
+  const layerSpacing = 6;
+  const neuronSpacing = 2.6;
+  const totalW = (layerSizes.length - 1) * layerSpacing;
+  const startX = -totalW / 2;
+
+  const bgNeurons = [];
+  const bgConnections = [];
+  const bgParticles = [];
+
+  const layerColors = [0x10b981, 0x00c8ff, 0x8b5cf6, 0x00c8ff, 0x8b5cf6, 0xff2d78];
+
+  // Create neurons
+  for (let l = 0; l < layerSizes.length; l++) {
+    const count = layerSizes[l];
+    const sy = -(count - 1) * neuronSpacing / 2;
+    for (let n = 0; n < count; n++) {
+      const color = layerColors[l];
+      const group = new THREE.Group();
+
+      // Glow
+      const glowMat = new THREE.MeshPhongMaterial({
+        color, transparent: true, opacity: 0.12,
+        emissive: color, emissiveIntensity: 0.25
+      });
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 20), glowMat));
+
+      // Core
+      const coreMat = new THREE.MeshPhongMaterial({
+        color, emissive: color, emissiveIntensity: 0.5, shininess: 80
+      });
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), coreMat));
+
+      group.position.set(startX + l * layerSpacing, sy + n * neuronSpacing, 0);
+      group.userData = { layer: l, index: n, activation: 0, baseColor: color };
+      bgScene.add(group);
+      bgNeurons.push(group);
+    }
+  }
+
+  // Helper
+  function getBgNeuron(layer, index) {
+    return bgNeurons.find(n => n.userData.layer === layer && n.userData.index === index);
+  }
+
+  // Create connections
+  for (let l = 0; l < layerSizes.length - 1; l++) {
+    for (let i = 0; i < layerSizes[l]; i++) {
+      for (let j = 0; j < layerSizes[l + 1]; j++) {
+        const from = getBgNeuron(l, i);
+        const to = getBgNeuron(l + 1, j);
+        if (!from || !to) continue;
+
+        const w = (Math.random() - 0.5) * 2;
+        const absW = Math.abs(w);
+        const lineColor = w >= 0 ? new THREE.Color(0x10b981) : new THREE.Color(0xff4466);
+
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([from.position.clone(), to.position.clone()]),
+          new THREE.LineBasicMaterial({
+            color: lineColor, transparent: true,
+            opacity: Math.min(0.06 + absW * 0.15, 0.3),
+            blending: THREE.AdditiveBlending
+          })
+        );
+        line.userData = { layer: l, from: i, to: j, weight: w };
+        bgScene.add(line);
+        bgConnections.push(line);
+      }
+    }
+  }
+
+  // ===== PARTICLE SYSTEM =====
+  function spawnBgParticle(from, to) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x8b5cf6, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending
+    });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), mat);
+    mesh.position.copy(from);
+    mesh.userData = { from: from.clone(), to: to.clone(), progress: 0, speed: 0.012 + Math.random() * 0.008 };
+    bgScene.add(mesh);
+    bgParticles.push(mesh);
+  }
+
+  // ===== FORWARD PASS TRIGGER =====
+  let lastForwardTime = 0;
+  function triggerBgForward(time) {
+    if (time - lastForwardTime < 2.5) return;
+    lastForwardTime = time;
+
+    for (let l = 0; l < layerSizes.length; l++) {
+      for (let n = 0; n < layerSizes[l]; n++) {
+        const neuron = getBgNeuron(l, n);
+        if (!neuron) continue;
+
+        const delay = l * 200 + n * 30;
+        setTimeout(() => {
+          const activation = Math.random();
+          neuron.userData.activation = activation;
+          neuron.children[1].material.emissiveIntensity = 0.4 + activation * 1.0;
+          neuron.children[0].material.opacity = 0.08 + activation * 0.25;
+          neuron.scale.set(1.15, 1.15, 1.15);
+          setTimeout(() => neuron.scale.set(1, 1, 1), 180);
+
+          // Spawn particles to next layer
+          if (l < layerSizes.length - 1) {
+            for (let j = 0; j < layerSizes[l + 1]; j++) {
+              if (Math.random() > 0.35) continue;
+              const target = getBgNeuron(l + 1, j);
+              if (target) spawnBgParticle(neuron.position.clone(), target.position.clone());
+            }
+          }
+        }, delay);
+      }
+    }
+
+    // Simulate weight updates
+    bgConnections.forEach(conn => {
+      const delta = (Math.random() - 0.5) * 0.08;
+      conn.userData.weight += delta;
+      const w = conn.userData.weight;
+      conn.material.color = w >= 0 ? new THREE.Color(0x10b981) : new THREE.Color(0xff4466);
+      conn.material.opacity = Math.min(0.04 + Math.abs(w) * 0.12, 0.3);
+    });
+  }
+
+  // ===== CAMERA ORBIT =====
+  let bgTheta = 0;
+
+  // ===== ANIMATION LOOP =====
+  const bgClock = new THREE.Clock();
+  function bgAnimate() {
+    requestAnimationFrame(bgAnimate);
+    const time = bgClock.getElapsedTime();
+
+    // Slow auto-orbit
+    bgTheta += 0.001;
+    bgCamera.position.x = 30 * Math.sin(bgTheta);
+    bgCamera.position.z = 30 * Math.cos(bgTheta);
+    bgCamera.position.y = 2 + Math.sin(time * 0.2) * 3;
+    bgCamera.lookAt(0, 0, 0);
+
+    // Neuron idle glow
+    bgNeurons.forEach((n, i) => {
+      const base = 0.3 + n.userData.activation * 0.4;
+      n.children[1].material.emissiveIntensity = base + Math.sin(time * 1.5 + i * 0.4) * 0.12;
+    });
+
+    // Update particles
+    for (let i = bgParticles.length - 1; i >= 0; i--) {
+      const p = bgParticles[i];
+      p.userData.progress += p.userData.speed;
+      if (p.userData.progress >= 1) {
+        bgScene.remove(p);
+        bgParticles.splice(i, 1);
+        continue;
+      }
+      p.position.lerpVectors(p.userData.from, p.userData.to, p.userData.progress);
+      p.material.opacity = Math.sin(p.userData.progress * Math.PI) * 0.85;
+      const s = 0.6 + Math.sin(p.userData.progress * Math.PI) * 0.5;
+      p.scale.set(s, s, s);
+    }
+
+    // Trigger forward pass periodically
+    triggerBgForward(time);
+
+    bgRenderer.render(bgScene, bgCamera);
+  }
+
+  window.addEventListener('resize', () => {
+    bgCamera.aspect = window.innerWidth / window.innerHeight;
+    bgCamera.updateProjectionMatrix();
+    bgRenderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  bgAnimate();
+}
+
+initBackground();
+</script>
+</body>
+</html>
